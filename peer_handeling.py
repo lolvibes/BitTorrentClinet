@@ -66,15 +66,29 @@ while True:
         hpm.send_block_req(client_connected, begin=0, piece_index=0)
         # we will recive the message from the peer but we don't know what it is
         # it so we passed it in to bifuracte
-        msg_id_of_recived_data, load = hpm.recv_any_message_from_peer(client_connected)
-        if msg_id_of_recived_data == 7:  # this means the it send the piece we need so we can further process the payload
-            index, begin_offset, actual_data = hpm.parser_peice(load)
-            print(
-                f'got peice {index} which begins at the offset {begin_offset} and the length of the rest of the data{len(actual_data)}')
-            with open(f"peice_{index} begins_{begin_offset}.bin", 'wb') as f:
-                f.write(actual_data)
-                print("done writing stuff")
-        break
+        while True:
+            msg_id_of_recived_data, load = hpm.recv_any_message_from_peer(client_connected)
+            if msg_id_of_recived_data == 7:  # this means the it send the piece we need so we can further process the payload
+                index, begin_offset, actual_data = hpm.parser_peice(load)
+                print(
+                    f'got peice {index} which begins at the offset {begin_offset} and the length of the rest of the data{len(actual_data)}')
+                with open(f"peice_{index} begins_{begin_offset}.bin", 'wb') as f:
+                    f.write(actual_data)
+                    print("done writing stuff")
+                break
+            elif msg_id_of_recived_data==1:
+                print("got another unchocked, re-sending the request")
+                hpm.send_block_req(client_connected, begin=0, piece_index=0)
+            elif msg_id_of_recived_data==4:# its a have message
+                print("we can ignore have message for now")
+                continue
+            elif msg_id_of_recived_data==None:
+                continue
+            else:
+                print(f"expected the peice with message id 7 but got{msg_id_of_recived_data}")
+
+    elif msg_id==0:
+        print("peer chocked us")
     else:
-        print("he didn't choked us ")
+        print(f"outer loop msg id {msg_id}")
 
