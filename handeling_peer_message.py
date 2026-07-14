@@ -1,26 +1,19 @@
 import struct
-
+import asyncio
 
 # handeling any message checking the standard message format
-def recv_any_message_from_peer(client):
-    raw_bytes=recv_any_message_exact(client,4) # reading the prefix
+async def recv_any_message_from_peer(reader):
+    raw_bytes=await recv_any_message_exact(reader,4) # reading the prefix
     msg_len=struct.unpack(">I",raw_bytes)[0]# our message length aside from the prefix
     if msg_len==0:
         return None,None
-    raw_msg=recv_any_message_exact(client,msg_len)# we are reading the exact message length
+    raw_msg=await recv_any_message_exact(reader,msg_len)# we are reading the exact message length
     message_id=raw_msg[0]# within our exact message this is the first byte
     payload=raw_msg[1:] # remaining size slicing trough
     return message_id,payload # returning message id and payload
 
-def recv_any_message_exact(sock,n):# reading what we are recving
-    buf=b""
-    while len(buf)<n:
-        chunk=sock.recv(n- len(buf))
-        if not chunk:
-            raise ConnectionError("peer disconnect")
-        buf+=chunk
-
-    return buf
+async def recv_any_message_exact(reader,n):# reading what we are recving
+     return await reader.readexactly(n)
 #-------------------------* hahah ----------------------------------------
 
 # parsing the bitfield that we will recive as payload bcz its in raw bytes
@@ -52,9 +45,9 @@ def send_intrested():
 
 # no we are ginna assk the peer for the block of the piece
 BLOCK_SIZE=16*1024
-def send_block_req(sock,begin, piece_index=1,length=BLOCK_SIZE):
+def send_block_req(writer,begin, piece_index=1,length=BLOCK_SIZE):
     payload=struct.pack(">III",piece_index,begin,length)
-    sock.send(struct.pack(">I",1+len(payload))+bytes([6])+payload)
+    writer.write(struct.pack(">I",1+len(payload))+bytes([6])+payload)
 # after a  request we  send the peer send the message peice which have payload
 
 def parser_peice(payload):
